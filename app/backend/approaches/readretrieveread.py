@@ -117,7 +117,7 @@ Thought: {agent_scratchpad}"""
                         description=self.CognitiveSearchToolDescription,
                         callbacks=cb_manager)
         employee_tool = EmployeeInfoTool("Employee1", callbacks=cb_manager)
-        tools = [acs_tool, employee_tool]
+        tools = (acs_tool, employee_tool)
 
         prompt = ZeroShotAgent.create_prompt(
             tools=tools,
