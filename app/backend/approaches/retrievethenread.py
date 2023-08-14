@@ -50,7 +50,7 @@ info4.pdf: In-network institutions include Overlake, Swedish and others in the r
         use_semantic_captions = True if overrides.get("semantic_captions") and has_text else False
         top = overrides.get("top") or 3
         exclude_category = overrides.get("exclude_category") or None
-        filter = "category ne '{}'".format(exclude_category.replace("'", "''")) if exclude_category else None
+        search_filter = "category ne '{}'".format(exclude_category.replace("'", "''")) if exclude_category else None
 
         # If retrieval mode includes vectors, compute an embedding for the query
         if has_vector:
@@ -64,7 +64,7 @@ info4.pdf: In-network institutions include Overlake, Swedish and others in the r
         # Use semantic ranker if requested and if retrieval mode is text or hybrid (vectors + text)
         if overrides.get("semantic_ranker") and has_text:
             r = await self.search_client.search(query_text,
-                                          filter=filter,
+                                          filter=search_filter,
                                           query_type=QueryType.SEMANTIC,
                                           query_language="en-us",
                                           query_speller="lexicon",
@@ -76,7 +76,7 @@ info4.pdf: In-network institutions include Overlake, Swedish and others in the r
                                           vector_fields="embedding" if query_vector else None)
         else:
             r = await self.search_client.search(query_text,
-                                          filter=filter,
+                                          filter=search_filter,
                                           top=top,
                                           vector=query_vector,
                                           top_k=50 if query_vector else None,

@@ -63,7 +63,7 @@ If you cannot generate a search query, return just the number 0.
         use_semantic_captions = True if overrides.get("semantic_captions") and has_text else False
         top = overrides.get("top") or 3
         exclude_category = overrides.get("exclude_category") or None
-        filter = "category ne '{}'".format(exclude_category.replace("'", "''")) if exclude_category else None
+        search_filter = "category ne '{}'".format(exclude_category.replace("'", "''")) if exclude_category else None
 
         user_q = 'Generate search query for: ' + history[-1]["user"]
 
@@ -104,7 +104,7 @@ If you cannot generate a search query, return just the number 0.
         # Use semantic L2 reranker if requested and if retrieval mode is text or hybrid (vectors + text)
         if overrides.get("semantic_ranker") and has_text:
             r = await self.search_client.search(query_text,
-                                          filter=filter,
+                                          filter=search_filter,
                                           query_type=QueryType.SEMANTIC,
                                           query_language="en-us",
                                           query_speller="lexicon",
@@ -116,7 +116,7 @@ If you cannot generate a search query, return just the number 0.
                                           vector_fields="embedding" if query_vector else None)
         else:
             r = await self.search_client.search(query_text,
-                                          filter=filter,
+                                          filter=search_filter,
                                           top=top,
                                           vector=query_vector,
                                           top_k=50 if query_vector else None,

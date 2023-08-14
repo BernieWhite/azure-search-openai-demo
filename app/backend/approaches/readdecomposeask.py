@@ -30,7 +30,7 @@ class ReadDecomposeAsk(AskApproach):
         use_semantic_captions = True if overrides.get("semantic_captions") and has_text else False
         top = overrides.get("top") or 3
         exclude_category = overrides.get("exclude_category") or None
-        filter = "category ne '{}'".format(exclude_category.replace("'", "''")) if exclude_category else None
+        search_filter = "category ne '{}'".format(exclude_category.replace("'", "''")) if exclude_category else None
 
         # If retrieval mode includes vectors, compute an embedding for the query
         if has_vector:
@@ -44,7 +44,7 @@ class ReadDecomposeAsk(AskApproach):
 
         if overrides.get("semantic_ranker") and has_text:
             r = await self.search_client.search(query_text,
-                                          filter=filter,
+                                          filter=search_filter,
                                           query_type=QueryType.SEMANTIC,
                                           query_language="en-us",
                                           query_speller="lexicon",
@@ -56,7 +56,7 @@ class ReadDecomposeAsk(AskApproach):
                                           vector_fields="embedding" if query_vector else None)
         else:
             r = await self.search_client.search(query_text,
-                                          filter=filter,
+                                          filter=search_filter,
                                           top=top,
                                           vector=query_vector,
                                           top_k=50 if query_vector else None,
@@ -98,10 +98,10 @@ class ReadDecomposeAsk(AskApproach):
         cb_manager = CallbackManager(handlers=[cb_handler])
 
         llm = AzureOpenAI(deployment_name=self.openai_deployment, temperature=overrides.get("temperature") or 0.3, openai_api_key=openai.api_key)
-        tools = [
+        tools = (
             Tool(name="Search", func=lambda _: 'Not implemented', coroutine=search_and_store, description="useful for when you need to ask with search", callbacks=cb_manager),
             Tool(name="Lookup", func=lambda _: 'Not implemented', coroutine=self.lookup, description="useful for when you need to ask with lookup", callbacks=cb_manager)
-        ]
+        )
 
         prompt_prefix = overrides.get("prompt_template")
         prompt = PromptTemplate.from_examples(
