@@ -1,7 +1,8 @@
 from typing import Any, Dict, List, Optional, Union
+from uuid import UUID
 
 from langchain.callbacks.base import BaseCallbackHandler
-from langchain.schema import AgentAction, AgentFinish, LLMResult
+from langchain.schema import AgentAction, AgentFinish, BaseMessage, LLMResult
 
 
 def ch(text: Union[str, object]) -> str:
@@ -24,7 +25,6 @@ class HtmlCallbackHandler (BaseCallbackHandler):
 
     def on_llm_end(self, response: LLMResult, **kwargs: Any) -> None:
         """Do nothing."""
-        pass
 
     def on_llm_error(self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any) -> None:
         self.html += f"<span style='color:red'>LLM error: {ch(error)}</span><br>"
@@ -43,6 +43,9 @@ class HtmlCallbackHandler (BaseCallbackHandler):
     def on_chain_error(self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any) -> None:
         self.html += f"<span style='color:red'>Chain error: {ch(error)}</span><br>"
 
+    def on_chat_model_start(self, serialized: Dict[str, Any], messages: List[List[BaseMessage]], *, run_id: UUID, parent_run_id: UUID | None = None, **kwargs: Any) -> Any:
+        """Do Nothing."""
+
     def on_tool_start(
         self,
         serialized: Dict[str, Any],
@@ -51,7 +54,6 @@ class HtmlCallbackHandler (BaseCallbackHandler):
         **kwargs: Any,
     ) -> None:
         """Print out the log in specified color."""
-        pass
 
     def on_tool_end(
         self,
