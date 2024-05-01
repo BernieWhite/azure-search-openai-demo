@@ -19,6 +19,7 @@ from azure.storage.blob.aio import ContainerClient
 from azure.storage.blob.aio import StorageStreamDownloader as BlobDownloader
 from azure.storage.filedatalake.aio import FileSystemClient
 from azure.storage.filedatalake.aio import StorageStreamDownloader as DatalakeDownloader
+import logfire
 from openai import AsyncAzureOpenAI, AsyncOpenAI
 from opentelemetry.instrumentation.aiohttp_client import AioHttpClientInstrumentor
 from opentelemetry.instrumentation.asgi import OpenTelemetryMiddleware
@@ -465,6 +466,7 @@ async def setup_clients():
         )
 
     current_app.config[CONFIG_OPENAI_CLIENT] = openai_client
+    logfire.instrument_openai(openai_client)
     current_app.config[CONFIG_SEARCH_CLIENT] = search_client
     current_app.config[CONFIG_BLOB_CONTAINER_CLIENT] = blob_container_client
     current_app.config[CONFIG_AUTH_CLIENT] = auth_helper
@@ -571,7 +573,10 @@ def create_app():
         # This middleware tracks app route requests:
         app.asgi_app = OpenTelemetryMiddleware(app.asgi_app)  # type: ignore[assignment]
 
-    if os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING"):
+    if os.getenv("USE_LOGFIRE"):
+        instrument_app()
+        logfire.configure()
+    elif os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING"):
         configure_azure_monitor()
         instrument_app()
     elif os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT"):
