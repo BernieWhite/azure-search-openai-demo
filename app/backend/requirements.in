@@ -31,4 +31,4 @@ PyMuPDF
 beautifulsoup4
 types-beautifulsoup4
 msgraph-sdk==1.1.0
-logfire
+logfire>=0.28.2
