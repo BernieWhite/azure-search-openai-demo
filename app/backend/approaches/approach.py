@@ -23,6 +23,8 @@ from azure.search.documents.models import (
     VectorQuery,
 )
 from openai import AsyncOpenAI
+from opentelemetry.semconv.trace import SpanAttributes
+from opentelemetry.trace import SpanKind, get_tracer
 
 from core.authentication import AuthenticationHelper
 from text import nonewlines
@@ -139,42 +141,61 @@ class Approach(ABC):
         minimum_reranker_score: Optional[float],
     ) -> List[Document]:
         # Use semantic ranker if requested and if retrieval mode is text or hybrid (vectors + text)
-        if use_semantic_ranker and query_text:
-            results = await self.search_client.search(
-                search_text=query_text,
-                filter=filter,
-                query_type=QueryType.SEMANTIC,
-                query_language=self.query_language,
-                query_speller=self.query_speller,
-                semantic_configuration_name="default",
-                top=top,
-                query_caption="extractive|highlight-false" if use_semantic_captions else None,
-                vector_queries=vectors,
-            )
-        else:
-            results = await self.search_client.search(
-                search_text=query_text or "", filter=filter, top=top, vector_queries=vectors
-            )
-
-        documents = []
-        async for page in results.by_page():
-            async for document in page:
-                documents.append(
-                    Document(
-                        id=document.get("id"),
-                        content=document.get("content"),
-                        embedding=document.get("embedding"),
-                        image_embedding=document.get("imageEmbedding"),
-                        category=document.get("category"),
-                        sourcepage=document.get("sourcepage"),
-                        sourcefile=document.get("sourcefile"),
-                        oids=document.get("oids"),
-                        groups=document.get("groups"),
-                        captions=cast(List[QueryCaptionResult], document.get("@search.captions")),
-                        score=document.get("@search.score"),
-                        reranker_score=document.get("@search.reranker_score"),
-                    )
+        span_attributes = {
+            SpanAttributes.DB_SYSTEM: 'Azure AI Search',
+            SpanAttributes.DB_STATEMENT: query_text,
+            'azure_ai_search.use_semantic_ranker': use_semantic_ranker,
+            'azure_ai_search.use_semantic_captions': use_semantic_captions,
+            'azure_ai_search.minimum_search_score': minimum_search_score,
+            'azure_ai_search.minimum_reranker_score': minimum_reranker_score,
+            'azure_ai_search.vectors': vectors,
+            'azure_ai_search.filter': filter,
+            'azure_ai_search_top_n': top,
+        }
+        with get_tracer(__name__).start_as_current_span(
+                    'search', kind=SpanKind.CLIENT, attributes=span_attributes
+                ) as span:
+            if use_semantic_ranker and query_text:
+                span.set_attributes({
+                    'azure_ai_search.query_type': QueryType.SEMANTIC,
+                    'azure_ai_search.query_language': self.query_language,
+                    'azure_ai_search.query_speller': self.query_speller,
+                })
+                results = await self.search_client.search(
+                    search_text=query_text,
+                    filter=filter,
+                    query_type=QueryType.SEMANTIC,
+                    query_language=self.query_language,
+                    query_speller=self.query_speller,
+                    semantic_configuration_name="default",
+                    top=top,
+                    query_caption="extractive|highlight-false" if use_semantic_captions else None,
+                    vector_queries=vectors,
                 )
+            else:
+                results = await self.search_client.search(
+                    search_text=query_text or "", filter=filter, top=top, vector_queries=vectors
+                )
+
+            documents = []
+            async for page in results.by_page():
+                async for document in page:
+                    documents.append(
+                        Document(
+                            id=document.get("id"),
+                            content=document.get("content"),
+                            embedding=document.get("embedding"),
+                            image_embedding=document.get("imageEmbedding"),
+                            category=document.get("category"),
+                            sourcepage=document.get("sourcepage"),
+                            sourcefile=document.get("sourcefile"),
+                            oids=document.get("oids"),
+                            groups=document.get("groups"),
+                            captions=cast(List[QueryCaptionResult], document.get("@search.captions")),
+                            score=document.get("@search.score"),
+                            reranker_score=document.get("@search.reranker_score"),
+                        )
+                    )
 
             qualified_documents = [
                 doc
@@ -184,6 +205,9 @@ class Approach(ABC):
                     and (doc.reranker_score or 0) >= (minimum_reranker_score or 0)
                 )
             ]
+
+            span.set_attribute('azure_ai_search.results_count', len(documents))
+            span.set_attribute('azure_ai_search.qualified_results_count', len(qualified_documents))
 
         return qualified_documents
 
