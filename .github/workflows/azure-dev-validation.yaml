@@ -49,7 +49,7 @@ jobs:
           summary: true
         env:
           PSRULE_CONFIGURATION_AZURE_BICEP_FILE_EXPANSION: 'true'
-          PSRULE_CONFIGURATION_AZURE_BICEP_FILE_EXPANSION_TIMEOUT: '10'
+          PSRULE_CONFIGURATION_AZURE_BICEP_FILE_EXPANSION_TIMEOUT: '30'
 
       - name: Upload results to security tab
         uses: github/codeql-action/upload-sarif@v3
