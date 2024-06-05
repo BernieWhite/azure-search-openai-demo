@@ -43,7 +43,7 @@ jobs:
         uses: microsoft/ps-rule@v2.9.0
         with:
           modules: PSRule.Rules.Azure
-          # inputPath: infra/*.test.bicep
+          inputPath: infra/*.test.bicep
           outputFormat: Sarif
           outputPath: reports/ps-rule-results.sarif
           summary: true
